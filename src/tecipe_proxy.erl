@@ -56,6 +56,7 @@ parse_v2(<<?V2_VERSION:4, Command:4, Family:4, Transport:4>>, Body) ->
 do_parse_v2(#tecipe_proxy{proxy_family = inet4} = Proxy,
 	    <<SA1:8, SA2:8, SA3:8, SA4:8, DA1:8, DA2:8, DA3:8, DA4:8,
 	      SourcePort:16, DestPort:16, _/binary>>) ->
+    error_logger:info_msg("================================+> source_addr: ~p~ndest_addr: ~p", [{SA1, SA2, SA3, SA4}, {DA1, DA2, DA3, DA4}]),
     Proxy#tecipe_proxy{
       source_address = {SA1, SA2, SA3, SA4},
       dest_address = {DA1, DA2, DA3, DA4},
