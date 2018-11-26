@@ -66,6 +66,7 @@ start_listener(Ref, Port, Handler, ListenerOpts, TransportUserOpts) ->
 		   supervisor,
 		   [tecipe_listener_sup]},
 
+    erlang_logger:error_msg("starting supervisor's child, listener_sup: ~p", [ListenerSup]),
     {ok, ListenerPID} = supervisor:start_child(tecipe_sup, ListenerSup),
 
     true = ets:insert(?LISTENER_TAB, {Ref, ListenerRec#tecipe_listener{
