@@ -15,6 +15,7 @@ init([Ref, Port, Handler, ListenerRec]) ->
 
     Transport = ListenerRec#tecipe_listener.transport,
     TransportInitOpts = ListenerRec#tecipe_listener.transport_init_opts,
+    error_logger:info_msg("listening to port: ~p, opts: ~p", [Port, TransportInitOpts]),
     {ok, ListeningSock} = Transport:listen(Port, TransportInitOpts),
 
     AcceptorChild =
