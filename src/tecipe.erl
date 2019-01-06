@@ -32,6 +32,7 @@ start_listener(Ref, Port, Handler, ListenerOpts) ->
 		     tecipe_transport_opts()) -> {ok, tecipe_listener_pid()}.
 
 start_listener(Ref, Port, Handler, ListenerOpts, TransportUserOpts) ->
+    error_logger:error_msg("apply_opts in ~p", [?MODULE]),
     Acceptor = proplists:get_value(acceptor, ListenerOpts, default_listener_acceptor()),
     Pool = proplists:get_value(pool, ListenerOpts, default_listener_pool_count()),
     Transport = proplists:get_value(transport, ListenerOpts, default_listener_transport()),
