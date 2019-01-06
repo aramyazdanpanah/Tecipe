@@ -14,6 +14,8 @@ start_link(Ref, Handler, ListeningSock, ListenerRec) ->
     {ok, AcceptorSup} = supervisor:start_link({local, Name}, ?MODULE,
 					      [Ref, Handler, Transport, ListeningSock, ListenerRec]),
     [{ok, _} = add_acceptor(AcceptorSup) || _ <- lists:seq(1, Pool)],
+
+    error_logger:info_msg("start_link in ~p", [?MODULE]),
     {ok, AcceptorSup}.
 
 add_acceptor(Pid) ->
@@ -21,37 +23,39 @@ add_acceptor(Pid) ->
 
 init([Ref, Handler, Transport, ListeningSock, ListenerRec]) ->
     Acceptor = {{tecipe_acceptor_loop, Ref},
-		{?MODULE, start_acceptor, [Handler, Transport, ListeningSock, ListenerRec]},
-		permanent,
-		3000,
-		worker,
-		[?MODULE]},
+                {?MODULE, start_acceptor, [Handler, Transport, ListeningSock, ListenerRec]},
+                permanent,
+                3000,
+                worker,
+                [?MODULE]},
 
+    error_logger:info_msg("init in ~p", [?MODULE]),
     {ok, {{simple_one_for_one, 10, 1}, [Acceptor]}}.
 
 start_acceptor(Handler, Transport, ListeningSock, ListenerRec) ->
     Pid = spawn_link(fun() ->
-			     acceptor_loop(Handler, Transport, ListeningSock, ListenerRec)
+                             error_logger:info_msg("start acceptor in ~p", [?MODULE]),
+                             acceptor_loop(Handler, Transport, ListeningSock, ListenerRec)
 		     end),
     {ok, Pid}.
 
 acceptor_loop(Handler, Transport, ListeningSock, ListenerRec) ->
     {ok, Sock} = Transport:accept(ListeningSock),
-
+    error_logger:info_msg("acceptor_loop in ~p", [?MODULE]),
     TecipeSock = tecipe_socket:upgrade(Sock, Transport, ListenerRec),
     WorkerPID = case Handler of
-		    {Module, Function, Args} ->
-			proc_lib:spawn(Module, Function, [Transport, TecipeSock, Args]);
-		    Function ->
-			spawn(fun() -> Function(Transport, TecipeSock) end)
-		end,
+                    {Module, Function, Args} ->
+                        proc_lib:spawn(Module, Function, [Transport, TecipeSock, Args]);
+                    Function ->
+                        spawn(fun() -> Function(Transport, TecipeSock) end)
+                end,
 
     case ListenerRec#tecipe_listener.monitor of
-	true ->
-	    tecipe_monitor:monitor_worker(ListenerRec#tecipe_listener.monitor_name,
-					  TecipeSock, WorkerPID);
-	_ ->
-	    ok
+        true ->
+            tecipe_monitor:monitor_worker(ListenerRec#tecipe_listener.monitor_name,
+                                          TecipeSock, WorkerPID);
+        _ ->
+            ok
     end,
 
     gen_tcp:controlling_process(Sock, WorkerPID),

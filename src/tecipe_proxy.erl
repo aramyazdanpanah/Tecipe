@@ -22,33 +22,36 @@
 -define(V2_TRANSPORT_DGRAM, 2).
 
 -spec check(tecipe_socket(),
-	    tecipe_listener_transport(),
-	    tecipe_listener()) -> tecipe_socket().
+            tecipe_listener_transport(),
+            tecipe_listener()) -> tecipe_socket().
 
 check(Sock, Transport, #tecipe_listener{proxy = v1}) ->
+    error_logger:info_msg("check v1 in ~p", [?MODULE]),
     Transport:setopts(Sock, [{active, once}, {packet, line}]),
     InetSock = Sock#tecipe_socket.inet_socket,
     receive
-	{tcp, InetSock, <<?V1_SIGNATURE, Body/binary>>} ->
-	    Sock#tecipe_socket{proxy = parse_v1(Body)};
+        {tcp, InetSock, <<?V1_SIGNATURE, Body/binary>>} ->
+            Sock#tecipe_socket{proxy = parse_v1(Body)};
 
-	BadFrame ->
-	    exit({proxy_v1_parsing_error, BadFrame})
+        BadFrame ->
+            exit({proxy_v1_parsing_error, BadFrame})
     end;
 
 check(Sock, Transport, #tecipe_listener{proxy = v2}) ->
+    error_logger:info_msg("check v2 in ~p", [?MODULE]),
     {ok, Data} = Transport:recv(Sock, ?V2_BYTE_SIZE_HEADER),
 
     case Data of
-	<<?V2_SIGNATURE, Info:2/binary, Len:2/binary>> ->
-	    {ok, Body} = Transport:recv(Sock, binary:decode_unsigned(Len)),
-	    Sock#tecipe_socket{proxy = parse_v2(Info, Body)};
+        <<?V2_SIGNATURE, Info:2/binary, Len:2/binary>> ->
+            {ok, Body} = Transport:recv(Sock, binary:decode_unsigned(Len)),
+            Sock#tecipe_socket{proxy = parse_v2(Info, Body)};
 
-	BadFrame ->
-	    exit({proxy_v2_parsing_error, BadFrame})
+        BadFrame ->
+            exit({proxy_v2_parsing_error, BadFrame})
     end;
 
 check(Sock, _, _) ->
+    error_logger:info_msg("check none in ~p", [?MODULE]),
     Sock.
 
 %% === private function
@@ -56,34 +59,34 @@ check(Sock, _, _) ->
 -spec parse_v1(binary()) -> tecipe_proxy().
 parse_v1(<<Family:5/binary, Rest/binary>>) ->
     do_parse_v1(#tecipe_proxy{proxy_version = v1,
-			      proxy_family = parse_v1_family(Family)},
-		binary:replace(Rest, <<"\r\n">>, <<>>)).
+                              proxy_family = parse_v1_family(Family)},
+                binary:replace(Rest, <<"\r\n">>, <<>>)).
 
 do_parse_v1(#tecipe_proxy{proxy_family = inet4} = Proxy, RestBody) ->
     [SourceAddress, DestAddress, SourcePort, DestPort] = binary:split(RestBody, <<" ">>, [global]),
     Proxy#tecipe_proxy{source_address = parse_binary_ip4(SourceAddress),
-		       dest_address = parse_binary_ip4(DestAddress),
-		       source_port = binary_to_integer(SourcePort),
-		       dest_port = binary_to_integer(DestPort)};
+                       dest_address = parse_binary_ip4(DestAddress),
+                       source_port = binary_to_integer(SourcePort),
+                       dest_port = binary_to_integer(DestPort)};
 
 do_parse_v1(#tecipe_proxy{proxy_family = inet6} = Proxy, RestBody) ->
     [SourceAddress, DestAddress, SourcePort, DestPort] = binary:split(RestBody, <<" ">>, [global]),
     Proxy#tecipe_proxy{source_address = parse_binary_ip6(SourceAddress),
-		       dest_address = parse_binary_ip6(DestAddress),
-		       source_port = binary_to_integer(SourcePort),
-		       dest_port = binary_to_integer(DestPort)}.
+                       dest_address = parse_binary_ip6(DestAddress),
+                       source_port = binary_to_integer(SourcePort),
+                       dest_port = binary_to_integer(DestPort)}.
 
 -spec parse_v2(binary(), binary()) -> tecipe_proxy().
 parse_v2(<<?V2_VERSION:4, Command:4, Family:4, Transport:4>>, Body) ->
     do_parse_v2(#tecipe_proxy{proxy_version = v2,
-			      proxy_command = parse_v2_command(Command),
-			      proxy_family = parse_v2_family(Family),
-			      proxy_transport = parse_v2_transport(Transport)},
-		Body).
+                              proxy_command = parse_v2_command(Command),
+                              proxy_family = parse_v2_family(Family),
+                              proxy_transport = parse_v2_transport(Transport)},
+                Body).
 
 do_parse_v2(#tecipe_proxy{proxy_family = inet4} = Proxy,
-	    <<SA1:8, SA2:8, SA3:8, SA4:8, DA1:8, DA2:8, DA3:8, DA4:8,
-	      SourcePort:16, DestPort:16, _/binary>>) ->
+            <<SA1:8, SA2:8, SA3:8, SA4:8, DA1:8, DA2:8, DA3:8, DA4:8,
+              SourcePort:16, DestPort:16, _/binary>>) ->
     Proxy#tecipe_proxy{
       source_address = {SA1, SA2, SA3, SA4},
       dest_address = {DA1, DA2, DA3, DA4},
@@ -91,10 +94,10 @@ do_parse_v2(#tecipe_proxy{proxy_family = inet4} = Proxy,
       dest_port = DestPort};
 
 do_parse_v2(#tecipe_proxy{proxy_family = inet6} = Proxy,
-	    <<SA1:16, SA2:16, SA3:16, SA4:16, SA5:16, SA6:16, SA7:16, SA8:16,
-	      DA1:16, DA2:16, DA3:16, DA4:16, DA5:16, DA6:16, DA7:16, DA8:16,
-	      SrcPort:16,
-	      DestPort:16, _/binary>>) ->
+            <<SA1:16, SA2:16, SA3:16, SA4:16, SA5:16, SA6:16, SA7:16, SA8:16,
+              DA1:16, DA2:16, DA3:16, DA4:16, DA5:16, DA6:16, DA7:16, DA8:16,
+              SrcPort:16,
+              DestPort:16, _/binary>>) ->
     Proxy#tecipe_proxy{
       source_address = SrcPort,
       dest_address = DestPort,
