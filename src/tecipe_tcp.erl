@@ -27,7 +27,7 @@ controlling_process(#tecipe_socket{inet_socket = Sock}, Pid) ->
 controlling_process(Sock, Pid) ->
     gen_tcp:controlling_process(Sock, Pid).
 
-peername(#tecipe_socket{inet_socket = Sock, proxy = false}) ->
+peername(#tecipe_socket{inet_socket = Sock, proxy = undefined}) ->
     inet:peername(Sock);
 peername(#tecipe_socket{proxy = #tecipe_proxy{source_address = Address, source_port = Port}}) ->
     {ok, {Address, Port}};
