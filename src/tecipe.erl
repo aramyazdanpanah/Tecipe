@@ -139,4 +139,5 @@ transport_init_opts() ->
     [{mode, binary}, {active, false}, {packet, raw}].
 
 transport_default_opts() ->
-    [{mode, list}, {active, true}].
+    %% [{mode, list}, {active, true}].
+    [].
